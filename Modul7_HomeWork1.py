@@ -55,6 +55,7 @@ class Birthday(Field):
         except ValueError:
             raise ValueError("Invalid date format. Use DD.MM.YYYY")
 
+
 class Record:
     def __init__(self, name):
         self.name = Name(name)
@@ -112,6 +113,8 @@ class AddressBook(UserDict):
         upcoming_birthdays = []
         today = date.today()
         for user in self.data.values():
+            if user.birthday is None:
+                continue
             birthday_this_year = user.birthday.value.replace(year=today.year)
             if birthday_this_year < today:
                 birthday_this_year = birthday_this_year.replace(year=today.year + 1)
@@ -215,13 +218,15 @@ def show_birthday(args, book: AddressBook):
         return "Contact and Birthday added"
 
 
-
-
 @input_error
-def birthdays(args, book: AddressBook):
-    name, birthday, *_ = args
-    get_birthday = book.get_upcoming_birthdays()
-    return '\n'.join([f"{name}: {get_birthday}" for name, birthday in book])
+def birthdays(args, book: AddressBook): # не розумію як реаліщувати функцію 
+    birthday, *_ = args
+    upcoming_birthdays = book.get_upcoming_birthdays()
+    if not upcoming_birthdays:
+        return "No upcoming birthdays in the next few days."
+
+    return birthday.get_upcoming_birthdays()
+
 
 def main():
     book = AddressBook()
