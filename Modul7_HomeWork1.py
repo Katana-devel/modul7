@@ -1,5 +1,6 @@
 from collections import UserDict
 from datetime import datetime, date, timedelta
+import re
 
 
 def string_to_date(date_string):
@@ -47,10 +48,12 @@ class Phone(Field):
 class Birthday(Field):
     def __init__(self, value):
         super().__init__(value)
+        verification = r"^\d{2}\.\d{2}\.\d{4}$"
         try:
-            self.value = datetime.strptime(value, "%d.%m.%Y")
+            if re.match(verification, value):
+                self.value = value
         except ValueError:
-            raise ValueError("Invalid date format. Use DD/MM/YYYY")
+            raise ValueError("Invalid date format. Use DD.MM.YYYY")
 
 class Record:
     def __init__(self, name):
@@ -133,9 +136,11 @@ def input_error(func):
             return "Wrong key"
         except IndexError:
             return "Wrong index"
-
+        except Exception as e:
+            return f"An unexpected error occurred: {e}"
 
     return inner
+
 
 def parse_input(user_input):
     cmd, *args = user_input.split()
@@ -157,15 +162,13 @@ def add_contact(args, book: AddressBook):
 
 @input_error
 def change_contact(args, book: AddressBook):
-    name, phone, *_ = args
+    name, old_phone, new_phone, *_ = args
     record = book.find(name)
     message = "Contact changed."
-    if record is None:
-        record = Record(name)
-        book.add_record(record)
-        message = "Contact added."
-    if phone:
-        record.add_phone(phone)
+    if record is not None:
+        record.edit_phone(old_phone, new_phone)
+    else:
+        message = "Contact not found"
     return message
 
 @input_error
@@ -178,7 +181,13 @@ def show_phone(args,  book: AddressBook):
 
 @input_error
 def show_all(book: AddressBook):
-    return '\n'.join(str(record) for record in book.data.values())
+    result = []
+    for name, record in book.data.items():
+        phone_numbers = '; '.join(phone.value for phone in record.phones)
+        birthday_str = f", Birthday: {record.birthday.value}" if record.birthday else ""
+        result.append(f"{name}: {phone_numbers}{birthday_str}")
+
+    return '\n'.join(result)
 
 @input_error
 def add_birthday(args, book: AddressBook):
@@ -197,20 +206,32 @@ def add_birthday(args, book: AddressBook):
 def show_birthday(args, book: AddressBook):
     name = args[0]
     record = book.find(name)
-    if record:
-        return record.birthday.value
-    return 'Birthday not found'
+    if not record is None:
+        if record.birthday is not None:
+            return record.birthday.value
+        else:
+            return "Birthday not found"
+    else:
+        return "Contact and Birthday added"
+
+
+
 
 @input_error
 def birthdays(args, book: AddressBook):
     name, birthday, *_ = args
-    return book.get_upcoming_birthdays()
+    get_birthday = book.get_upcoming_birthdays()
+    return '\n'.join([f"{name}: {get_birthday}" for name, birthday in book])
 
 def main():
     book = AddressBook()
     print("Welcome to the assistant bot!")
     while True:
         user_input = input("Enter a command: ")
+        if not user_input:
+            print("Please enter a command.")
+            continue
+
         command, *args = parse_input(user_input)
 
         if command in ["close", "exit"]:
