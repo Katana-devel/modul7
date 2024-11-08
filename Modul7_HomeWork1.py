@@ -115,16 +115,19 @@ class AddressBook(UserDict):
         for user in self.data.values():
             if user.birthday is None:
                 continue
-            birthday_this_year = user.birthday.value.replace(year=today.year)
+
+            birthday_this_year = user.birthday.replace(year=today.year)
             if birthday_this_year < today:
                 birthday_this_year = birthday_this_year.replace(year=today.year + 1)
 
             if 0 <= (birthday_this_year - today).days <= days:
                 congratulation_date = adjust_for_weekend(birthday_this_year)
                 upcoming_birthdays.append(
-                    {"name": user.name.value , "congratulation_date": date_to_string(congratulation_date)})
+                    {"name": user.name.value, "congratulation_date": date_to_string(congratulation_date)}
+                )
 
         return upcoming_birthdays
+
     def __str__(self):
         contacts = "\n".join(str(record) for record in self.data.values())
         return f"Information about contacts:\n{contacts}"
@@ -194,15 +197,21 @@ def show_all(book: AddressBook):
 
 @input_error
 def add_birthday(args, book: AddressBook):
-    name, birthday,*_ = args
+    name, birthday, *_ = args
     record = book.find(name)
     message = "Birthday updated."
+
     if record is None:
         record = Record(name)
         book.add_record(record)
-        message = "Contact and Birthday added"
-    if birthday:
-        record.add_birthday(birthday)
+        message = "Contact and Birthday added."
+
+    try:
+        birthday_date = datetime.strptime(birthday, '%d.%m.%Y').date()
+    except ValueError:
+        return "Error: Invalid date format. Please use DD.MM.YYYY"
+
+    record.birthday = birthday_date
     return message
 
 @input_error
@@ -219,13 +228,20 @@ def show_birthday(args, book: AddressBook):
 
 
 @input_error
-def birthdays(args, book: AddressBook): # не розумію як реаліщувати функцію 
-    birthday, *_ = args
-    upcoming_birthdays = book.get_upcoming_birthdays()
-    if not upcoming_birthdays:
-        return "No upcoming birthdays in the next few days."
+def birthdays(book: AddressBook):
+    days = 7
+    upcoming_birthdays = book.get_upcoming_birthdays(days)
 
-    return birthday.get_upcoming_birthdays()
+    if not upcoming_birthdays:
+        return "Немає днів народження на найближчі 7 днів."
+
+    result = "Дні народження на найближчі 7 днів:\n"
+    for birthday_info in upcoming_birthdays:
+        name = birthday_info["name"]
+        congratulation_date = birthday_info["congratulation_date"]
+        result += f"{name}: {congratulation_date}\n"
+
+    return result
 
 
 def main():
@@ -265,7 +281,8 @@ def main():
             print(show_birthday(args, book))
 
         elif command == "birthdays":
-            print(birthdays(args, book))
+
+            print(birthdays(book))
         else:
             print("Invalid command.")
 
