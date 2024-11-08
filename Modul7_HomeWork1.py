@@ -47,11 +47,8 @@ class Phone(Field):
 
 class Birthday(Field):
     def __init__(self, value):
-        super().__init__(value)
-        verification = r"^\d{2}\.\d{2}\.\d{4}$"
         try:
-            if re.match(verification, value):
-                self.value = value
+            self.value = datetime.strptime(value, '%d.%m.%Y').date()
         except ValueError:
             raise ValueError("Invalid date format. Use DD.MM.YYYY")
 
@@ -65,7 +62,6 @@ class Record:
     def add_phone(self,phone_number):
         new_phone = Phone(phone_number)
         self.phones.append(new_phone)
-
 
     def remove_phone(self, phone_number):
         for phone in self.phones:
@@ -92,8 +88,7 @@ class Record:
             return None
 
     def add_birthday(self, birthday):
-        new_birthday = Birthday(birthday)
-        self.birthday = new_birthday
+        self.birthday = Birthday(birthday)
 
     def __str__(self):
         return f"Contact name: {self.name.value}, phones: {'; '.join(p.value for p in self.phones)}"
@@ -116,7 +111,7 @@ class AddressBook(UserDict):
             if user.birthday is None:
                 continue
 
-            birthday_this_year = user.birthday.replace(year=today.year)
+            birthday_this_year = user.birthday.value.replace(year=today.year)
             if birthday_this_year < today:
                 birthday_this_year = birthday_this_year.replace(year=today.year + 1)
 
@@ -207,12 +202,12 @@ def add_birthday(args, book: AddressBook):
         message = "Contact and Birthday added."
 
     try:
-        birthday_date = datetime.strptime(birthday, '%d.%m.%Y').date()
+        record.add_birthday(birthday)
     except ValueError:
         return "Error: Invalid date format. Please use DD.MM.YYYY"
 
-    record.birthday = birthday_date
     return message
+
 
 @input_error
 def show_birthday(args, book: AddressBook):
@@ -242,7 +237,6 @@ def birthdays(book: AddressBook):
         result += f"{name}: {congratulation_date}\n"
 
     return result
-
 
 def main():
     book = AddressBook()
