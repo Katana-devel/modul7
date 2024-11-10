@@ -47,9 +47,11 @@ class Phone(Field):
 
 class Birthday(Field):
     def __init__(self, value):
-        try:
-            self.value = datetime.strptime(value, '%d.%m.%Y').date()
-        except ValueError:
+        super().__init__(value)
+        verification = r"^\d{2}\.\d{2}\.\d{4}$"
+        if re.match(verification, value):
+            self.value = value
+        else:
             raise ValueError("Invalid date format. Use DD.MM.YYYY")
 
 
